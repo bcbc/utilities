@@ -55,8 +55,8 @@ for option in "$@"; do
     ;;
 # Get the new size in GB
     *[^0-9]*)
-        if test "x$virtualdisk" != x; then
-          echo "$self: Too many parameters" 1>&2
+        if test "x"$virtualdisk"" != x; then
+          echo "$0: Too many parameters" 1>&2
           usage
           exit 1
         else
@@ -75,16 +75,36 @@ for option in "$@"; do
     esac
 done
 
+
 # Check it's a standard wubi loopmounted install 
 # The size must be valid and between 5GB and the default maximum size 
 # unless the --max-override option is supplied.
 # There must be sufficient space on /host for the new disk
 # including a remaining space buffer of 5% of total disk size
-
+precheck()
+{
     if [ "$(whoami)" != root ]; then
         echo "$0: Admin rights are required to run this program." 
         exit 1
     fi
+
+    if [ ! -f "$virtualdisk" ]; then
+        echo "$0: "$virtualdisk" not found" 1>&2
+        exit 1
+    fi
+
+    if [ "$size_entered" != "true" ]; then
+        echo "$0: Please enter the new size"
+        echo "$0: Use \"--help\" for usage instructions"
+        exit 1
+    fi
+    if [ $size -lt 5 ]; then
+        echo "$0: The new disk must be at least 5GB."
+        exit 1
+    fi
+
+#TODO
+# check space where virtual disk is located (derive mountpoint, check space)
 
     while read DEV MTPT FSTYPE OPTS REST; do
         case "$DEV" in
@@ -97,24 +117,32 @@ done
           ;;
         esac
     done < /proc/mounts
+}
 
-            # Force fsck and correct without prompt 
-            # Ignore exit codes:
-            #    0 - no problem
-            #    1 - errors corrected.
-            fsck -fp "$virtualdisk" > /dev/null # just let errors show
-            if [ "$?" -gt 1 ]; then
-              echo "$0: Cancelling resize - fsck failed"
-              exit 1
-            fi
-            resize2fs "$virtualdisk" "$size"G > /dev/null # this is actually gibibytes
-            if [ "$?" -ne 0 ]; then
-              echo "$0: Resize of "$virtualdisk" to "$size"G failed"
-              exit 1
-            fi
-            new_size=$(du -b "$virtualdisk" 2> /dev/null | cut -f 1)
-            new_size=`echo "$new_size / 1000000000" | bc`  #assumes made by this program, otherwise will underreport
-            echo "$0: "$virtualdisk" resized to "$new_size" GB"
-     
+# Do an inplace resize of the supplied virtual disk
+# 
+resize()
+{
+    # Force fsck and correct without prompt 
+    # Exit codes:
+    #    0 - no problem
+    #    1 - errors corrected.
+    fsck -fp "$virtualdisk" > /dev/null # just let errors show
+    if [ "$?" -gt 1 ]; then
+        echo "$0: Cancelling resize - fsck failed"
+        exit 1
+    fi
+    resize2fs "$virtualdisk" "$size"G > /dev/null # this is actually gibibytes
+    if [ "$?" -ne 0 ]; then
+        echo "$0: Resize of "$virtualdisk" to "$size"G failed"
+        exit 1
+    fi
+    # report new size
+    new_size=$(du -BG "$virtualdisk" 2> /dev/null | cut -f 1)
+    echo "$0: "$virtualdisk" resized to "$new_size""
 
+}
+
+precheck
+resize
 exit 0
