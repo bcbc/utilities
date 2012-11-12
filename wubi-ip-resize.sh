@@ -21,6 +21,11 @@
 ##########################################################################
 version=1.0
 virtualdisk=
+size=               # size of new virtual disk 
+maxsize=32          # max size of new virtual disk
+ignore_max=false    # override max size limit?
+size_entered=false  #did the user enter the new size?
+
 
 usage () 
 {
@@ -33,6 +38,7 @@ Usage: sudo bash $0 [options] | wubi_virtual_disk [size in GB]
 Resize the wubi virtual disk size  
   -h, --help              print this message and exit
   --version               print the version information and exit
+  --max-override          ignore maximum size constraint of 32GB
 EOF
 }
 
@@ -49,7 +55,10 @@ for option in "$@"; do
     echo "$0: Verbose option selected"
     verbose=true
     ;;
-   -*)
+    --max-override)
+    ignore_max=true
+    ;;
+    -*)
     echo "$0: Unrecognized option '$option'. (--help for usage instructions)"
     exit 1
     ;;
@@ -75,6 +84,25 @@ for option in "$@"; do
     esac
 done
 
+### Present Y/N questions and check response 
+### (a valid response is required)
+### Parameter: the question requiring an answer
+### Returns: 0 = Yes, 1 = No
+test_YN ()
+{
+    while true; do
+      echo "$@"
+      read input
+      case "$input" in
+        "y" | "Y" )
+          return 0 ;;
+        "n" | "N" )
+          return 1 ;;
+        * )
+          echo "Invalid response ('$input')"
+      esac
+    done
+}
 
 # Check it's a standard wubi loopmounted install 
 # The size must be valid and between 5GB and the default maximum size 
@@ -94,18 +122,21 @@ precheck()
     fi
 
     if [ "$size_entered" != "true" ]; then
-        echo "$0: Please enter the new size"
-        echo "$0: Use \"--help\" for usage instructions"
+        echo "$0: Please enter the new size" 1>&2
+        echo "$0: Use \"--help\" for usage instructions" 1>&2
         exit 1
     fi
     if [ $size -lt 5 ]; then
-        echo "$0: The new disk must be at least 5GB."
+        echo "$0: The new disk must be at least 5GB." 1>&2
         exit 1
     fi
-
-#TODO
-# check space where virtual disk is located (derive mountpoint, check space)
-
+    if [ "$ignore_max" = "false" ]; then
+        if [ $size -gt $maxsize ]; then
+            echo "$0: The new size cannot exceed $maxsize G unless the"
+            echo "$0: --max-override option is used (not recommended)."
+            exit 1
+        fi
+    fi
     while read DEV MTPT FSTYPE OPTS REST; do
         case "$DEV" in
           /dev/loop/*|/dev/loop[0-9])
@@ -117,12 +148,69 @@ precheck()
           ;;
         esac
     done < /proc/mounts
+
+# check available space where virtual disk is located 
+# (derive mountpoint, check space)
+    loop_file="$(readlink -e "$virtualdisk")" # get full path and file name
+    mtpt="${loop_file%/*}"
+    while [ -n "$mtpt" ]; do
+        while read DEV MTPT FSTYPE OPTS REST; do
+            if [ "$MTPT" = "$mtpt" ]; then
+                loop_file=${loop_file#$MTPT}
+                host_mountpoint=$MTPT
+                break
+            fi
+        done < /proc/mounts
+        mtpt="${mtpt%/*}"
+        [ -z "$host_mountpoint" ] || break
+    done
+    if [ "$host_mountpoint" == "" ]; then
+        host_mountpoint=/
+    fi
+
+# get free space in G; it returns the ceiling, we need the floor
+    free_space=$(df -BG "$host_mountpoint" |tail -n 1|awk '{print $4}')
+    free_space=${free_space%G}
+    free_space=$((free_space - 1))
+#    echo "Free space on host: "$free_space"G"
+
+# leave this one as a ceiling - need some buffer anyway
+    current_size=$(du -BG "$virtualdisk" | cut -f 1)
+    current_size=${current_size%G}
+#    echo "Current size: "$current_size"G"
+
+# no space issue if reducing the size
+    if [ $size -gt $current_size ]; then
+        increased_size=$((size - current_size))
+#        echo "Increased size: "$increased_size"G"
+        if [ $increased_size -ge $free_space ]; then
+            echo "$0: Not enough free space" 1>&2
+            echo "$0: Free space on "$host_mountpoint": "$free_space"G" 1>&2
+            echo "$0: Space required for resize: "$increased_size"G" 1>&2
+            exit 1
+        fi
+    elif [ $size -lt $current_size ]; then
+        echo "$0: Note:resize2fs checks for the minimum allowed size, but"
+        echo "$0: it lists this as a 'known issue' so please check yourself."
+    else
+        echo "$0: "$virtualdisk" is already "$size"G" 1>&2
+        exit 1
+    fi
 }
 
 # Do an inplace resize of the supplied virtual disk
 # 
 resize()
 {
+    echo ""
+    test_YN "$0: About to resize "$virtualdisk" from "$current_size"G to "$size"G. Continue? (Y/N)"
+    # User pressed N
+    if [ "$?" -eq "1" ]; then
+       echo "$0: Canceled"
+       exit 0
+    fi
+
+
     # Force fsck and correct without prompt 
     # Exit codes:
     #    0 - no problem
