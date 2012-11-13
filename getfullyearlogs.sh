@@ -41,12 +41,15 @@ if [ $year -lt 2004 ]; then
   exit 1  
 fi
 
-. "$getlogs_script" $1 $2 1 y
-. "$getlogs_script" $1 $2 2 y
-. "$getlogs_script" $1 $2 3 y
-. "$getlogs_script" $1 $2 4 y
-. "$getlogs_script" $1 $2 5 y
-. "$getlogs_script" $1 $2 6 y
+# logs only as far back as 2004/07
+if [ $year -ne 2004 ]; then
+  . "$getlogs_script" $1 $2 1 y
+  . "$getlogs_script" $1 $2 2 y
+  . "$getlogs_script" $1 $2 3 y
+  . "$getlogs_script" $1 $2 4 y
+  . "$getlogs_script" $1 $2 5 y
+  . "$getlogs_script" $1 $2 6 y
+fi
 . "$getlogs_script" $1 $2 7 y
 . "$getlogs_script" $1 $2 8 y
 . "$getlogs_script" $1 $2 9 y
