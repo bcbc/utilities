@@ -4,6 +4,12 @@
 #
 # Download all logs for the channel for the given year/month
 #
+
+overwrite=false
+noprompt=false
+channel=
+year=
+month=
 for option in "$@"; do
     case "$option" in
     -h | --help)
@@ -13,9 +19,20 @@ for option in "$@"; do
     echo "and store them in ~/irclogs/ubuntu/2012/08/ ..."
     echo "       bash getlogs.sh ubuntu 2012 08"
     exit 0 ;;
+    --overwrite)
+        overwrite=true
+    ;;
+    --noprompt)
+        noprompt=true
+    ;;
+    --channel=*)
+        channel=`echo "$option" | sed 's/--channel=//'` ;;
+    --year=*)
+        year=`echo "$option" | sed 's/--year=//'` ;;
+    --month=*)
+        month=`echo "$option" | sed 's/--month=//'` ;;
     esac
 done
-
 ### Present Y/N questions and check response 
 ### (a valid response is required)
 ### Parameter: the question requiring an answer
@@ -37,10 +54,10 @@ test_YN ()
 }
 
 # strip off any leading # from the channel name
-channel=${1##\#}
+channel=${channel##\#}
 
 # check the 4 digit year is numeric and >= 2004
-year=$2
+#year=$2
 if ! [[ "$year" =~ ^[0-9]+$ ]] ; then
   exec >&2
   echo "Year $year has to be a valid year"
@@ -53,7 +70,7 @@ if [ $year -lt 2004 ]; then
 fi
 
 # check the month is valid and determine the last day of the month
-month=$3
+#month=$3
 case $month in 
 1|3|5|7|8|10|12)
  lastday=31
@@ -77,7 +94,7 @@ case $month in
  exit 1
  ;;
 esac
-month=$(printf %02d "$3") #make month two digits
+month=$(printf %02d "$month") #make month two digits
 day=1
 
 # if the current month, don't request logs for days in the future (UTC)
@@ -98,7 +115,7 @@ if [ $maxDays -le $lastday ]; then
 fi
 
 echo ""
-if [ "$4" != "y" ]; then
+if [ "$noprompt" == "false" ]; then
  message="Download logs from #"$channel" for "$year"-"$month"-$(printf %02d "$day") to "$year"-"$month"-$(printf %02d "$lastday")"
  test_YN ""$message" (Y/N)"
  # User pressed N
@@ -126,12 +143,12 @@ do
   twodigitday=$(printf %02d "$day")
   logaddress=http://irclogs.ubuntu.com/$year/$month/$twodigitday/%23$channel.txt
   savefile=~/irclogs/$channel/$year/$month/$channel$year-$month-$twodigitday.txt
-  if [ -f "$savefile" ]; then
+  if [ "$overwrite" == "false" ] && [ -f "$savefile" ]; then
    # already downloaded so skip
-    echo Already downloaded $logaddress
+    echo "Already downloaded "$logaddress""
   else
-    echo downloading $logaddress
-    wget --output-document=$savefile --progress=dot $logaddress > /dev/null 2>&1
+    echo "Downloading "$logaddress""
+    wget --output-document="$savefile" "$logaddress" > /dev/null 2>&1
     rc=$?
     if [ "$rc" -ne 0 ]; then
 #      grep -i $searchterm $savefile > /dev/null 2>&1
@@ -142,7 +159,8 @@ do
 #        echo Found $searchterm in $savefile
 #      fi
 #    else
-      echo Download of $logaddress failed
+      echo "Download of "$logaddress" failed"
+      rm "$savefile"
     fi
   fi
   day=$[$day+1]
