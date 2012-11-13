@@ -16,6 +16,15 @@ for option in "$@"; do
     esac
 done
 
+local_dir="$(dirname "$(readlink /proc/$$/fd/255)")"
+getlogs_script="$local_dir"/getlogs.sh
+if [ ! -f "$getlogs_script" ]; then
+  error "Script "$getlogs_script" is missing"
+  exit 1
+fi
+
+
+
 # strip off any leading # from the channel name
 channel=${1##\#}
 
@@ -32,16 +41,16 @@ if [ $year -lt 2004 ]; then
   exit 1  
 fi
 
-bash getlogs.sh $1 $2 1 y
-bash getlogs.sh $1 $2 2 y
-bash getlogs.sh $1 $2 3 y
-bash getlogs.sh $1 $2 4 y
-bash getlogs.sh $1 $2 5 y
-bash getlogs.sh $1 $2 6 y
-bash getlogs.sh $1 $2 7 y
-bash getlogs.sh $1 $2 8 y
-bash getlogs.sh $1 $2 9 y
-bash getlogs.sh $1 $2 10 y
-bash getlogs.sh $1 $2 11 y
-bash getlogs.sh $1 $2 12 y
+. "$getlogs_script" $1 $2 1 y
+. "$getlogs_script" $1 $2 2 y
+. "$getlogs_script" $1 $2 3 y
+. "$getlogs_script" $1 $2 4 y
+. "$getlogs_script" $1 $2 5 y
+. "$getlogs_script" $1 $2 6 y
+. "$getlogs_script" $1 $2 7 y
+. "$getlogs_script" $1 $2 8 y
+. "$getlogs_script" $1 $2 9 y
+. "$getlogs_script" $1 $2 10 y
+. "$getlogs_script" $1 $2 11 y
+. "$getlogs_script" $1 $2 12 y
 
