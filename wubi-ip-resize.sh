@@ -242,7 +242,7 @@ resize()
     fi
 
     # report new size
-    new_size=$(du -BG "$virtualdisk" 2> /dev/null | cut -f 1)
+    new_size=$(du -BG --apparent-size "$virtualdisk" 2> /dev/null | cut -f 1)
     echo "$0: "$virtualdisk" resized to "$new_size""
 
 }
