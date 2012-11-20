@@ -24,8 +24,8 @@ virtualdisk=
 size=               # size of new virtual disk 
 maxsize=32          # max size of new virtual disk
 ignore_max=false    # override max size limit?
-size_entered=false  #did the user enter the new size?
-
+size_entered=false  # did the user enter the new size?
+verbose=false       # verbose output
 
 usage () 
 {
@@ -215,16 +215,32 @@ resize()
     # Exit codes:
     #    0 - no problem
     #    1 - errors corrected.
-    fsck -fp "$virtualdisk" > /dev/null # just let errors show
+    echo "$0: Running required fsck on "$virtualdisk""
+    fsck -fp "$virtualdisk" > /tmp/wubi-resize-output 2>&1
     if [ "$?" -gt 1 ]; then
         echo "$0: Cancelling resize - fsck failed"
+        echo "Error is: $(cat /tmp/wubi-resize-output)"
         exit 1
     fi
-    resize2fs "$virtualdisk" "$size"G > /dev/null # this is actually gibibytes
+
+    if [ "$verbose" == "true" ]; then
+      echo "$(cat /tmp/wubi-resize-output)"
+      echo ""
+    fi
+
+    echo "$0: Resizing "$virtualdisk"..."
+    resize2fs "$virtualdisk" "$size"G > /tmp/wubi-resize-output 2>&1 # this is actually gibibytes
     if [ "$?" -ne 0 ]; then
         echo "$0: Resize of "$virtualdisk" to "$size"G failed"
+        echo "Error is: $(cat /tmp/wubi-resize-output)"
         exit 1
     fi
+
+    if [ "$verbose" == "true" ]; then
+      echo "$(cat /tmp/wubi-resize-output)"
+      echo ""
+    fi
+
     # report new size
     new_size=$(du -BG "$virtualdisk" 2> /dev/null | cut -f 1)
     echo "$0: "$virtualdisk" resized to "$new_size""
