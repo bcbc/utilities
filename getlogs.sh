@@ -10,17 +10,31 @@ noprompt=false
 channel=
 year=
 month=
+usage ()
+{
+    cat <<EOF
+Usage: bash $0 --channel=<channel> --year=<year> --month=<month>
+       e.g. bash $0 --help (print this message)
+       e.g. bash $0 --channel=ubuntu --year=2012 --month=6
+
+Download IRC logs from irclogs.ubuntu.com for a specific channel/year/month
+  --channel=          any logged channel (required)
+  --year=             4-digit year >= 2004 (required)
+  --month=            1-12 (required)
+  --help              print this message and exit
+  --overwrite         overwrite log files even if previously downloaded
+  --noprompt          don't prompt user to confirm prior to download
+
+EOF
+}
 for option in "$@"; do
     case "$option" in
     -h | --help)
-    echo "Download irclogs from any ubuntu channel for a specific month"
-    echo "Usage: bash getlogs.sh channel year month"
-    echo "For example, to download logs from #ubuntu in August 2012,"
-    echo "and store them in ~/irclogs/ubuntu/2012/08/ ..."
-    echo "       bash getlogs.sh ubuntu 2012 08"
-    exit 0 ;;
+        usage
+        exit 0 ;;
     --overwrite)
         overwrite=true
+        echo "Existing log files will be replaced"
     ;;
     --noprompt)
         noprompt=true
@@ -31,6 +45,11 @@ for option in "$@"; do
         year=`echo "$option" | sed 's/--year=//'` ;;
     --month=*)
         month=`echo "$option" | sed 's/--month=//'` ;;
+    *)
+        exec >&2
+        echo "Invalid input "$option""
+        usage
+        exit 1
     esac
 done
 ### Present Y/N questions and check response 
