@@ -156,6 +156,16 @@ mkdir ~/irclogs/$channel/$year/$month > /dev/null 2>&1
 #  exit 1
 #fi
 
+# Check for file called "searchstrings" in the same
+# directory as "getlogs.sh" that contains search
+# strings separated by spaces.
+local_dir="$(dirname "$(readlink /proc/$$/fd/255)")"
+searchstrings="$local_dir"/searchstrings
+searcharray=
+if [ -f "$searchstrings" ]; then
+    read searcharray < "$searchstrings"
+fi
+
 # download the .txt log for each day of the month
 while [ "$day" -le $lastday ]
 do
@@ -169,15 +179,16 @@ do
     echo "Downloading "$logaddress""
     wget --output-document="$savefile" "$logaddress" > /dev/null 2>&1
     rc=$?
-    if [ "$rc" -ne 0 ]; then
-#      grep -i $searchterm $savefile > /dev/null 2>&1
-#      rc=$?
-#      if [ "$rc" -ne 0 ]; then
-#        rm $savefile > /dev/null 2>&1
-#      else
-#        echo Found $searchterm in $savefile
-#      fi
-#    else
+    if [ "$rc" -eq 0 ]; then
+	# space separated arguments so dont' escape $searcharray
+      for searchterm in $searcharray; do
+        grep -i $searchterm $savefile > /dev/null 2>&1
+        rc=$?
+        if [ "$rc" -eq 0 ]; then
+          echo "Searchterm: "$searchterm" found in "$savefile""
+        fi
+      done
+    else
       echo "Download of "$logaddress" failed"
       rm "$savefile"
     fi
