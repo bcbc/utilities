@@ -33,4 +33,10 @@ if [ -n "$OLD" ]; then
     echo "Running:"
     echo " sudo apt-get remove --purge "$OLD""
     sudo apt-get remove --purge $OLD
+else
+    echo ""
+    echo "The following kernels were found:"
+    echo "$KEEP"
+    echo "-----------------------------------"
+    echo "No kernels were found that can be removed."
 fi
