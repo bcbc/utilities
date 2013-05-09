@@ -17,4 +17,20 @@
 ##########################################################################
 
 OLD=$(ls -tr /boot/vmlinuz-* | head -n -2 | cut -d- -f2- | awk '{print "linux-image-" $0}')
-if [ -n "$OLD" ]; then sudo apt-get -q remove --purge $OLD; fi
+KEEP=$(ls -t /boot/vmlinuz-* | head -n 2 | cut -d- -f2- | awk '{print "linux-image-" $0}')
+#if [ -n "$OLD" ]; then sudo apt-get -q remove --purge $OLD; fi
+if [ -n "$OLD" ]; then
+    # let user know
+    echo ""
+    echo "The following kernels will be kept:"
+    echo "$KEEP"
+    echo "-----------------------------------"
+    echo "These kernels will be removed:"
+    echo "$OLD"
+    echo "-----------------------------------"
+    echo "Press Enter to continue (Ctrl+C to cancel)"
+    read
+    echo "Running:"
+    echo " sudo apt-get remove --purge "$OLD""
+    sudo apt-get remove --purge $OLD
+fi
