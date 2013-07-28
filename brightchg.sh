@@ -16,4 +16,7 @@ if [ "$1" == "up" ]; then
 else
   curr=`echo "$curr - $bump" | bc`
 fi
-echo $curr | tee /sys/class/backlight/intel_backlight/brightness
+# Don't go lower than 30, no matter what the starting position
+if [ $curr -gt 30 ]; then
+    echo $curr | tee /sys/class/backlight/intel_backlight/brightness
+fi
