@@ -33,6 +33,13 @@ if [ -n "$OLD" ]; then
     echo "Running:"
     echo " sudo apt-get remove --purge "$OLD""
     sudo apt-get remove --purge $OLD
+    echo "Removing packages that are no longer needed"
+    echo "and clean up unneeded packages from the cache..."
+    echo "-----------------------------------"
+    echo "Press Enter to continue (Ctrl+C to cancel)"
+    read
+    sudo apt-get autoremove
+    sudo apt-get autoclean
 else
     echo ""
     echo "The following kernels were found:"
