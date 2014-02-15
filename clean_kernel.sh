@@ -15,9 +15,12 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ##########################################################################
-
-OLD=$(ls -tr /boot/vmlinuz-* | head -n -2 | cut -d- -f2- | awk '{print "linux-image-" $0}')
-KEEP=$(ls -t /boot/vmlinuz-* | head -n 2 | cut -d- -f2- | awk '{print "linux-image-" $0}')
+keep=2
+if [ $1 == "1" ]; then
+    keep=1
+fi
+OLD=$(ls -tr /boot/vmlinuz-* | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
+KEEP=$(ls -t /boot/vmlinuz-* | head -n $keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 #if [ -n "$OLD" ]; then sudo apt-get -q remove --purge $OLD; fi
 if [ -n "$OLD" ]; then
     # let user know

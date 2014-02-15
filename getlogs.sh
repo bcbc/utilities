@@ -10,6 +10,7 @@ noprompt=false
 channel=
 year=
 month=
+dayoverride=
 usage ()
 {
     cat <<EOF
@@ -24,6 +25,7 @@ Download IRC logs from irclogs.ubuntu.com for a specific channel/year/month
   --help              print this message and exit
   --overwrite         overwrite log files even if previously downloaded
   --noprompt          don't prompt user to confirm prior to download
+  --day=              start at a certain date *temp option*
 
 EOF
 }
@@ -45,6 +47,8 @@ for option in "$@"; do
         year=`echo "$option" | sed 's/--year=//'` ;;
     --month=*)
         month=`echo "$option" | sed 's/--month=//'` ;;
+    --day=*)
+        dayoverride=`echo "$option" | sed 's/--day=//'` ;;
     *)
         exec >&2
         echo "Invalid input "$option""
@@ -79,7 +83,7 @@ channel=${channel##\#}
 #year=$2
 if ! [[ "$year" =~ ^[0-9]+$ ]] ; then
   exec >&2
-  echo "Year $year has to be a valid year"
+  echo "Year $year must be a positive integer"
   exit 1
 fi
 if [ $year -lt 2004 ]; then
@@ -115,11 +119,26 @@ case $month in
 esac
 month=$(printf %02d "$month") #make month two digits
 day=1
+# override start day
+if [ "$dayoverride" != "" ]; then
+  if ! [[ "$dayoverride" =~ ^[0-9]+$ ]] ; then
+    exec >&2
+    echo "--day $dayoverride must be a positive integer"
+    exit 1
+  fi
+  if [ $dayoverride -lt 1 ] || [ $dayoverride -gt $lastday ]; then
+    exec >&2
+    echo "Starting --day has to be between 1 and $lastday: $dayoverride"
+    exit 1  
+  fi
+  day=$dayoverride
+fi
 
 # if the current month, don't request logs for days in the future (UTC)
 # and make sure the year/month isn't in the future
 currentDate=`date -u +%s`
-startDate=`date -d $year$month$(printf %02d "$day") -u +%s`
+#startDate=`date -d $year$month$(printf %02d "$day") -u +%s`
+startDate=`date -d "$year""$month"01 -u +%s`
 if [ $startDate -gt $currentDate ]; then
   exec >&2
   echo "Can't download logs in the future"
@@ -182,7 +201,8 @@ do
     if [ "$rc" -eq 0 ]; then
 	# space separated arguments so dont' escape $searcharray
       for searchterm in $searcharray; do
-        grep -i $searchterm $savefile > /dev/null 2>&1
+	keywordfile=~/irclogs/keyword$searchterm
+        grep --no-filename -i $searchterm $savefile >> $keywordfile 2>&1
         rc=$?
         if [ "$rc" -eq 0 ]; then
           echo "Searchterm: "$searchterm" found in "$savefile""
