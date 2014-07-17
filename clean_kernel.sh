@@ -16,7 +16,7 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ##########################################################################
 keep=2
-if [ $1 == "1" ]; then
+if [ "$1" == "1" ]; then
     keep=1
 fi
 OLD=$(ls -tr /boot/vmlinuz-* | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
