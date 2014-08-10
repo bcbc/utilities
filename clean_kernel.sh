@@ -15,14 +15,18 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307 USA
 ##########################################################################
+
+# If you keep a single kernel there is some risk because kernels are
+# sometimes updated, not just replaced. If you about to do a release
+# upgrade or you are installing a newer kernel, then keeping one is ok.
 keep=2
 if [ "$1" == "1" ]; then
     keep=1
 fi
 OLD=$(ls -tr /boot/vmlinuz-* | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 KEEP=$(ls -t /boot/vmlinuz-* | head -n $keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
-#if [ -n "$OLD" ]; then sudo apt-get -q remove --purge $OLD; fi
 if [ -n "$OLD" ]; then
+    purge_command="sudo apt-get -q remove --purge $OLD"
     # let user know
     echo ""
     echo "The following kernels will be kept:"
@@ -34,8 +38,8 @@ if [ -n "$OLD" ]; then
     echo "Press Enter to continue (Ctrl+C to cancel)"
     read
     echo "Running:"
-    echo " sudo apt-get remove --purge "$OLD""
-    sudo apt-get remove --purge $OLD
+    echo " "$purge_command""
+    ${purge_command}
     echo "Removing packages that are no longer needed"
     echo "and clean up unneeded packages from the cache..."
     echo "-----------------------------------"
