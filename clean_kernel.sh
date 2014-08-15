@@ -20,13 +20,56 @@
 # sometimes updated, not just replaced. If you about to do a release
 # upgrade or you are installing a newer kernel, then keeping one is ok.
 keep=2
-if [ "$1" == "1" ]; then
-    keep=1
+quiet=false
+options=q
+version=0.1beta
+usage ()
+{
+    cat <<EOF
+Removes all but the 2 most recent linux kernels.
+
+Options:
+  --keep=num     Change the number of kernels to keep (1-9)
+  --quiet        No prompt except for sudo (if required)
+EOF
+}
+
+for option in "$@"; do
+    case "$option" in
+    -h | --help)
+    usage
+    exit 0 ;;
+    --version)
+    echo "$0: Version $version"
+    exit 0 ;;
+    --quiet)
+      options=qq
+      quiet=true
+    ;;
+    --keep=*)
+        keep=`echo "$option" | sed 's/--keep=//'` ;;
+    -*)
+    echo "$0: Unrecognized option '$option'. (--help for usage instructions)"
+    exit 1
+    ;;
+    *)
+    echo "$0: Unrecognized argument '$option'. (--help for usage instructions)"
+    exit 1
+    ;;
+  esac
+done
+
+
+if ! [[ "$keep" =~ ^[1-9]$ ]] ; then
+  exec >&2
+  echo "--keep= option only accepts values 1 to 9"
+  exit 1
 fi
+
 OLD=$(ls -tr /boot/vmlinuz-* | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 KEEP=$(ls -t /boot/vmlinuz-* | head -n $keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 if [ -n "$OLD" ]; then
-    purge_command="sudo apt-get -q remove --purge $OLD"
+    purge_command="sudo apt-get -"$options" remove --purge $OLD"
     # let user know
     echo ""
     echo "The following kernels will be kept:"
@@ -35,18 +78,23 @@ if [ -n "$OLD" ]; then
     echo "These kernels will be removed:"
     echo "$OLD"
     echo "-----------------------------------"
-    echo "Press Enter to continue (Ctrl+C to cancel)"
-    read
+    if [ "$quiet" != "true" ]; then
+        echo "Press Enter to continue (Ctrl+C to cancel)"
+        read
+    fi
     echo "Running:"
     echo " "$purge_command""
     ${purge_command}
+    echo "-----------------------------------"
     echo "Removing packages that are no longer needed"
     echo "and clean up unneeded packages from the cache..."
     echo "-----------------------------------"
-    echo "Press Enter to continue (Ctrl+C to cancel)"
-    read
-    sudo apt-get autoremove
-    sudo apt-get autoclean
+    if [ "$quiet" != "true" ]; then
+        echo "Press Enter to continue (Ctrl+C to cancel)"
+        read
+    fi
+    sudo apt-get -${options} autoremove
+    sudo apt-get -${options} autoclean
 else
     echo ""
     echo "The following kernels were found:"
