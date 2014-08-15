@@ -59,7 +59,6 @@ for option in "$@"; do
   esac
 done
 
-
 if ! [[ "$keep" =~ ^[1-9]$ ]] ; then
   exec >&2
   echo "--keep= option only accepts values 1 to 9"
@@ -69,7 +68,6 @@ fi
 OLD=$(ls -tr /boot/vmlinuz-* | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 KEEP=$(ls -t /boot/vmlinuz-* | head -n $keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 if [ -n "$OLD" ]; then
-    purge_command="sudo apt-get -"$options" remove --purge $OLD"
     # let user know
     echo ""
     echo "The following kernels will be kept:"
@@ -82,6 +80,7 @@ if [ -n "$OLD" ]; then
         echo "Press Enter to continue (Ctrl+C to cancel)"
         read
     fi
+    purge_command="sudo apt-get -"$options" remove --purge $OLD"
     echo "Running:"
     echo " "$purge_command""
     ${purge_command}
@@ -93,8 +92,15 @@ if [ -n "$OLD" ]; then
         echo "Press Enter to continue (Ctrl+C to cancel)"
         read
     fi
-    sudo apt-get -${options} autoremove
-    sudo apt-get -${options} autoclean
+    autoremove_command="sudo apt-get -"$options" autoremove"
+    echo "Running:"
+    echo " "$autoremove_command""
+    ${autoremove_command}
+    autoclean_command="sudo apt-get -"$options" autoclean"
+    echo ""
+    echo "Running:"
+    echo " "$autoclean_command""
+    ${autoclean_command}
 else
     echo ""
     echo "The following kernels were found:"
