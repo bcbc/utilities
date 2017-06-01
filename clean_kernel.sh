@@ -65,8 +65,8 @@ if ! [[ "$keep" =~ ^[1-9]$ ]] ; then
   exit 1
 fi
 
-OLD=$(ls -tr /boot/vmlinuz-* | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
-KEEP=$(ls -t /boot/vmlinuz-* | head -n $keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
+OLD=$(ls -tr /boot/vmlinuz-* | grep -vi 'efi' | head -n -$keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
+KEEP=$(ls -t /boot/vmlinuz-* | grep -vi 'efi' | head -n $keep | cut -d- -f2- | awk '{print "linux-image-" $0}')
 if [ -n "$OLD" ]; then
     # let user know
     echo ""
